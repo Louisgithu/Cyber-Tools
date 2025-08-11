@@ -1,0 +1,106 @@
+import socket
+import concurrent.futures
+import re
+import time
+import platform
+
+def reverse_dns(ip):
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except:
+        return None
+
+def detect_os(ip):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.3)
+        result = sock.connect_ex((ip, 135))  # Port 135 souvent Windows
+        sock.close()
+        if result == 0:
+            return "Windows (port 135 ouvert)"
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.3)
+        result = sock.connect_ex((ip, 22))  # Port 22 souvent Linux/Unix
+        sock.close()
+        if result == 0:
+            return "Linux/Unix (port 22 ouvert)"
+    except:
+        pass
+    return "OS indéterminé"
+
+def scan_port(ip, port, timeout):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((ip, port))
+        sock.close()
+
+        if result == 0:
+            try:
+                service = socket.getservbyport(port, "tcp")
+            except:
+                service = "unknown"
+            print(f"{port}/tcp\topen\t{service}")  # Affichage en temps réel
+    except:
+        pass
+
+def parse_options(option_str):
+    options = [opt.strip() for opt in option_str.split(",") if opt.strip()]
+    ports = range(1, 1025)
+    timeout, max_threads = 0.3, 200
+    skip_ping = False
+
+    speeds = {
+        "-T1": (1.0, 50),
+        "-T2": (0.6, 100),
+        "-T3": (0.3, 200),
+        "-T4": (0.15, 400),
+        "-T5": (0.05, 800)
+    }
+
+    for opt in options:
+        if opt.startswith("-p"):
+            port_str = opt.replace("-p", "").strip()
+            if "-" in port_str:
+                start, end = map(int, port_str.split("-"))
+                ports = range(start, end + 1)
+            else:
+                ports = [int(p) for p in re.findall(r'\d+', port_str)]
+        elif opt == "-Pn":
+            skip_ping = True
+        elif opt in speeds:
+            timeout, max_threads = speeds[opt]
+
+    return ports, timeout, max_threads, skip_ping
+
+def main():
+    print("=== Scanner ultra-rapide type Nmap ===")
+    ip = input("Adresse IP ou nom d'hôte : ").strip()
+    option_str = input("Options Nmap (séparées par des virgules) : ").strip()
+
+    ports, timeout, max_threads, skip_ping = parse_options(option_str)
+
+    # Reverse DNS
+    hostname = reverse_dns(ip)
+    if hostname:
+        print(f"[+] Nom d'hôte : {hostname}")
+    else:
+        print("[!] Impossible de résoudre le nom d'hôte")
+
+    # Détection OS
+    os_detected = detect_os(ip)
+    print(f"[+] Détection OS : {os_detected}")
+
+    print(f"\n[+] Scan de {ip} sur {len(ports)} ports... ({max_threads} threads)")
+    print("PORT\tSTATE\tSERVICE")
+    start_time = time.time()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+        for port in ports:
+            executor.submit(scan_port, ip, port, timeout)
+
+    duration = time.time() - start_time
+    print(f"\nScan terminé en {duration:.2f} secondes.")
+
+if __name__ == "__main__":
+    main()
