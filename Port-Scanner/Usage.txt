@@ -1,0 +1,31 @@
+Ultra-Fast Python Port Scanner (Nmap-style)
+
+Description
+
+This Python script is an ultra-fast port scanner inspired by Nmap.  
+It uses massive multithreading to be up to 10x faster than a traditional Nmap scan.  
+All common Nmap options can be entered at once, separated by commas.
+
+Features
+
+- Enter Nmap options in a single line (`-p`, `-Pn`, `-T1` to `-T5`)
+- Ultra-fast multithreaded port scanning
+- Real-time display of open ports
+- Reverse DNS resolution to get the hostname
+- Basic OS detection (Windows, Linux/Unix, or unknown)
+- Automatic service detection (`http`, `ssh`, `ftp`, etc.)
+
+Supported Options
+- `-p` : Port range or list (examples: `-p 80,443,8080` or `-p 1-65535`)
+- `-Pn` : Skip host discovery (useful for hosts blocking ICMP)
+- `-T1` to `-T5` : Scan speed levels  
+  - T1 = very slow, stealthy  
+  - T5 = extremely fast (⚠ packet loss risk on slow networks)
+
+Installation
+
+1. Download or clone this script.
+2. Make sure you have Python 3 installed.
+3. Run the script:
+```bash
+python scanner.py
